@@ -2,6 +2,7 @@
 
 
 #include "MyTexturePawn.h"
+#include "cuda.h"
 
 // Sets default values
 AMyTexturePawn::AMyTexturePawn()
@@ -32,3 +33,8 @@ void AMyTexturePawn::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 
 }
 
+bool AMyTexturePawn::TryCudaCall()
+{
+
+	return true;
+}
