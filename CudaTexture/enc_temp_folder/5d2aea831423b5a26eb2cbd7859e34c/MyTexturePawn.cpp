@@ -55,7 +55,7 @@ UTextureRenderTarget2D* AMyTexturePawn::CreateCUDACompatibleRenderTarget(UObject
 		MyRenderTarget->Filter = TF_Bilinear;
 		MyRenderTarget->AddressX = TA_Clamp;
 		MyRenderTarget->AddressY = TA_Clamp;
-		MyRenderTarget->ClearColor = FLinearColor::Red;
+		MyRenderTarget->ClearColor = FLinearColor::Black;
 		MyRenderTarget->InitAutoFormat(Width, Height);
 		MyRenderTarget->UpdateResourceImmediate(true); // Ensure the resource is created immediately
 	}

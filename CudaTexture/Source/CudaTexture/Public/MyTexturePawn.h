@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
+#include "Kismet/BlueprintFunctionLibrary.h"
+#include "Engine/TextureRenderTarget2D.h"// For UTextureRenderTarget2D and RTF_RGBA8
 #include "MyTexturePawn.generated.h"
 
 UCLASS()
@@ -28,4 +30,9 @@ public:
 
 
 	UFUNCTION(BlueprintCallable, Category = "CUDA") bool TryCudaCall();
+	UFUNCTION(BlueprintCallable, Category = "CUDA") static UTextureRenderTarget2D* CreateCUDACompatibleRenderTarget(UObject* Outer, int32 Width, int32 Height);
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "CUDA") UTextureRenderTarget2D* MyRenderTarget;//Blueprint Assignable only allow of multicast or something.
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GPU Interop")
+	FString SharedHandle;
 };
