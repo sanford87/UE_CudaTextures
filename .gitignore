@@ -76,3 +76,4 @@ DerivedDataCache/*
 /CudaTexture/Intermediate
 /CudaTexture/Saved
 /CudaTexture/Binaries
+/Code/CudaRuntimeLib/CudaRuntimeLib/x64
