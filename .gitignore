@@ -77,3 +77,4 @@ DerivedDataCache/*
 /CudaTexture/Saved
 /CudaTexture/Binaries
 /Code/CudaRuntimeLib/CudaRuntimeLib/x64
+/CudaTexture/enc_temp_folder

@@ -23,11 +23,13 @@ public class CudaTexture : ModuleRules
 
         PublicIncludePaths.Add(CudaIncl);
         PublicAdditionalLibraries.Add(Path.Combine(CudaLibDir, "cudart.lib"));
+        PublicAdditionalLibraries.Add(Path.Combine(CudaLibDir, "cuda.lib"));
 
-        string custom_cuda_include = "CUDALib/include";
-        string custom_cuda_lib = "CUDALib/lib";
 
         //Custom CUDA Libs
+        string custom_cuda_include = "CUDALib/include";
+        string custom_cuda_lib = "CUDALib/lib";
+        
         PublicIncludePaths.Add(Path.Combine(project_root_path, custom_cuda_include));
         PublicAdditionalLibraries.Add(Path.Combine(project_root_path, custom_cuda_lib, "UE_Cuda_Lib_Test.lib"));
         //write out where we think the file is
