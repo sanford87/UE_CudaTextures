@@ -15,12 +15,12 @@
 //Cuda
 #include "cuda.h"
 #include "cuda_runtime.h"
-#include "cudaD3D11.h"
+//#include "cudaD3D11.h"// used with cuda_d3d11_interop causes overlapping declarations
 #include"cuda_d3d11_interop.h"
 
 //directX
-#include <d3d11.h>
-#include <dxgi.h>
+//#include <d3d11.h>
+//#include <dxgi.h>
 
 cudaArray_t array = nullptr;
 
