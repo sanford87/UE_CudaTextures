@@ -175,9 +175,22 @@ ID3D11Resource* GetD3D11ResourceFromRT(UTextureRenderTarget2D* RT)
     if (!RTResource) return nullptr;
     FTexture2DRHIRef TextureRHI = RTResource->GetRenderTargetTexture();
     if (!TextureRHI.IsValid()) return nullptr;
-
+    
     // Cast the generic RHI reference to D3D11
-    return static_cast<ID3D11Resource*>(TextureRHI->GetNativeResource());
+    //return static_cast<ID3D11Resource*>(TextureRHI->GetNativeResource());// WORKS. but replaced with code below
+
+    ID3D11Resource* D3DResource = nullptr;
+    // Run on render thread
+    ENQUEUE_RENDER_COMMAND(FetchNativeResource)(
+        [TextureRHI, &D3DResource](FRHICommandListImmediate& RHICmdList)
+        {
+            D3DResource = static_cast<ID3D11Resource*>(TextureRHI->GetNativeResource());
+        });
+
+    // Block until the above command is executed
+    FlushRenderingCommands();
+
+    return D3DResource;
 }
 
 bool AMyTexturePawn::RegisterRenderTargetWithCUDA()

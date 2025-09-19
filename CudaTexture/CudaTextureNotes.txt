@@ -1,0 +1,2 @@
+LogTemp: Render target registered with CUDA successfully.
+LogTemp: MapRenderTargetToCUDA: Mapped cudaArray 0000026CF75B7FF0
