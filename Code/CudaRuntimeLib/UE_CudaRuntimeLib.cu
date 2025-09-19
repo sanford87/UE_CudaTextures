@@ -104,7 +104,7 @@ __global__ void FillSurfaceKernel(cudaSurfaceObject_t surf, int width, int heigh
 
     if (x < width && y < height)
     {
-        uchar4 pixel = make_uchar4(255, 0, 0, 255); // RGBA8 red
+        uchar4 pixel = make_uchar4(255, 0, 255, 255); // RGBA8 red
         surf2Dwrite(pixel, surf, x * sizeof(uchar4), y);
     }
 }

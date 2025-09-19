@@ -77,6 +77,14 @@
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
     </CudaCompile>
+    <PostBuildEvent>
+      <Command>REM Copy header file to UE project include folder
+copy /Y "E:\GitLocal\UE_CudaTextures\Code\CudaRuntimeLib\UE_CudaRuntimeLib.h" "E:\GitLocal\UE_CudaTextures\CudaTexture\CUDALib\include\UE_CudaRuntimeLib.h"
+
+REM Copy .lib file to UE project lib folder
+copy /Y "E:\GitLocal\UE_CudaTextures\Code\CudaRuntimeLib\x64\Release\UE_CudaRuntimeLib.lib" "E:\GitLocal\UE_CudaTextures\CudaTexture\CUDALib\lib\UE_CudaRuntimeLib.lib"
+</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <CudaCompile Include="UE_CudaRuntimeLib.cu" />
