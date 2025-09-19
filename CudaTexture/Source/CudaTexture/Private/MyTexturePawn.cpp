@@ -396,15 +396,159 @@ void AMyTexturePawn::ClearNativeResources()
 
 bool AMyTexturePawn::TryCudaWrite()
 {
-    if (MappedCudaArray)
-    {
-        //cudaArray_t cuArray; //make new cudaArray_t to send to kernel 
-        cudaArray_t cuArray = static_cast<cudaArray_t>(MappedCudaArray);
-        cudaGraphicsSubResourceGetMappedArray(&cuArray, CudaGraphicsResource, 0, 0); // copy contents of cuArray to new resource
-        int w = 2048;
 
-        LaunchFillSurfaceKernel(cuArray, w, w);
-        return true;
+    if (!bCUDARegistered || !CudaGraphicsResource)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("TryCudaWrite: not registered"));
+        return false;
     }
-    return false;
+
+    // Get width/height from render target (use actual values you created)
+    const int Width = MyRenderTarget ? MyRenderTarget->SizeX : 0;
+    const int Height = MyRenderTarget ? MyRenderTarget->SizeY : 0;
+    if (Width == 0 || Height == 0)
+    {
+        UE_LOG(LogTemp, Error, TEXT("TryCudaWrite: invalid size"));
+        return false;
+    }
+
+    // NOTE: We assume the resource is already mapped (MapRenderTargetToCUDA called earlier)
+    // If you haven't mapped it yet, map now:
+    cudaError_t err = cudaSuccess;
+    if (!MappedCudaArray)
+    {
+        err = cudaGraphicsMapResources(1, &CudaGraphicsResource, 0);
+        if (err != cudaSuccess)
+        {
+            UE_LOG(LogTemp, Error, TEXT("MapResources failed: %s"), ANSI_TO_TCHAR(cudaGetErrorString(err)));
+            return false;
+        }
+        // fill local CuArray and store it
+        cudaArray_t localArray = nullptr;
+        err = cudaGraphicsSubResourceGetMappedArray(&localArray, CudaGraphicsResource, 0, 0);
+        if (err != cudaSuccess)
+        {
+            UE_LOG(LogTemp, Error, TEXT("GetMappedArray failed: %s"), ANSI_TO_TCHAR(cudaGetErrorString(err)));
+            cudaGraphicsUnmapResources(1, &CudaGraphicsResource, 0);
+            return false;
+        }
+        MappedCudaArray = static_cast<void*>(localArray);
+    }
+
+    // Cast and call the kernel wrapper
+    cudaArray_t cuArray = static_cast<cudaArray_t>(MappedCudaArray);
+    cudaError_t launchStatus = LaunchFillSurfaceKernel(cuArray, Width, Height,seed);
+    if (launchStatus != cudaSuccess)
+    {
+        UE_LOG(LogTemp, Error, TEXT("LaunchFillSurfaceKernel failed: %s"), ANSI_TO_TCHAR(cudaGetErrorString(launchStatus)));
+        // If you mapped here, optionally unmap. Here we don't unmap to let caller manage lifecycle.
+        return false;
+    }
+
+    // If your LaunchFillSurfaceKernel does NOT call cudaDeviceSynchronize internally, you should:
+    // cudaError_t syncErr = cudaDeviceSynchronize();
+    // if (syncErr != cudaSuccess) { UE_LOG(...) }
+
+    // If you mapped within this function and you want to unmap now:
+    // cudaGraphicsUnmapResources(1, &CudaGraphicsResource, 0);
+    // MappedCudaArray = nullptr;
+
+    return true;
+
+
+    //if (MappedCudaArray)
+    //{
+    //    //cudaArray_t cuArray; //make new cudaArray_t to send to kernel 
+    //    cudaArray_t cuArray = static_cast<cudaArray_t>(MappedCudaArray);
+    //    cudaGraphicsSubResourceGetMappedArray(&cuArray, CudaGraphicsResource, 0, 0); // copy contents of cuArray to new resource
+    //    int w = 2048;
+
+    //    LaunchFillSurfaceKernel(cuArray, w, w);
+    //    return true;
+    //}
+    //return false;
+}
+
+
+bool AMyTexturePawn::TryCudaWriteOnRenderThread()
+{
+    if (!bCUDARegistered || !CudaGraphicsResource)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("TryCudaWriteOnRenderThread: not registered"));
+        return false;
+    }
+
+    // Map resources on the game thread (or earlier)
+    cudaError_t err = cudaGraphicsMapResources(1, &CudaGraphicsResource, 0);
+    if (err != cudaSuccess)
+    {
+        UE_LOG(LogTemp, Error, TEXT("MapResources failed: %s"), ANSI_TO_TCHAR(cudaGetErrorString(err)));
+        return false;
+    }
+
+    cudaArray_t cuArray = nullptr;
+    err = cudaGraphicsSubResourceGetMappedArray(&cuArray, CudaGraphicsResource, 0, 0);
+    if (err != cudaSuccess)
+    {
+        UE_LOG(LogTemp, Error, TEXT("GetMappedArray failed: %s"), ANSI_TO_TCHAR(cudaGetErrorString(err)));
+        cudaGraphicsUnmapResources(1, &CudaGraphicsResource, 0);
+        return false;
+    }
+
+    const int Width = MyRenderTarget ? MyRenderTarget->SizeX : 0;
+    const int Height = MyRenderTarget ? MyRenderTarget->SizeY : 0;
+    int seedRender = seed;
+    // Enqueue a render command that calls into your CUDA wrapper.
+    ENQUEUE_RENDER_COMMAND(RunCudaKernel)(
+        [cuArray, Width, Height, seedRender](FRHICommandListImmediate& RHICmdList)
+        {
+            // This runs on the render thread
+            cudaError_t s = LaunchFillSurfaceKernel(cuArray, Width, Height, seedRender);
+            if (s != cudaSuccess)
+            {
+                // Logging from render thread: can't call UE_LOG safely here in all contexts,
+                // but you can use GLog or queue result back to game thread.
+                // For simplicity, ignore here or set a flag.
+            }
+            // Important: LaunchFillSurfaceKernel should synchronize internally (cudaDeviceSynchronize).
+            // If it doesn't, the kernel may still be running after this returns.
+        });
+
+    // Option A: let it run async on render thread and return immediately (non-blocking).
+    // Option B: block until render thread handles it - force flush:
+    // FlushRenderingCommands(); // blocks game thread until render thread work is done.
+    // After flush, if LaunchFillSurfaceKernel synchronized internally, it's finished and you may unmap.
+
+    // Unmap (if you're done)
+    // cudaGraphicsUnmapResources(1, &CudaGraphicsResource, 0);
+
+    return true;
+}
+
+
+void AMyTexturePawn::TryCudaWriteOnRenderThreadZeroBlock()
+{
+    ENQUEUE_RENDER_COMMAND(CudaMapKernelUnmap)(
+        [this](FRHICommandListImmediate& RHICmdList)
+        {
+            // Map (host thread call is OK here because we're on render thread)
+            cudaError_t err = cudaGraphicsMapResources(1, &CudaGraphicsResource, 0);
+            if (err != cudaSuccess) { return; }
+
+            cudaArray_t cuArray = nullptr;
+            err = cudaGraphicsSubResourceGetMappedArray(&cuArray, CudaGraphicsResource, 0, 0);
+            if (err != cudaSuccess)
+            {
+                cudaGraphicsUnmapResources(1, &CudaGraphicsResource, 0);
+                return;
+            }
+
+            // Launch kernel and synchronize inside the render-thread lambda
+            cudaError_t status = LaunchFillSurfaceKernel(cuArray, MyRenderTarget->SizeX, MyRenderTarget->SizeY, seed);
+
+            // Unmap (only after kernel finished)
+            cudaGraphicsUnmapResources(1, &CudaGraphicsResource, 0);
+
+            // Optionally record status somewhere to read on game thread later
+        });
 }

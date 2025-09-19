@@ -7,5 +7,5 @@
 cudaError_t addWithCuda(int* c, const int* a, const int* b, unsigned int size);
 
 // New: surface fill kernel launcher (defined in .cu file)
-cudaError_t LaunchFillSurfaceKernel(cudaArray_t array, int width, int height);
+cudaError_t LaunchFillSurfaceKernel(cudaArray_t array, int width, int height, unsigned int seed);
 

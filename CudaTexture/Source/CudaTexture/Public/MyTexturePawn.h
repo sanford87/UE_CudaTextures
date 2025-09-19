@@ -45,6 +45,7 @@ public:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "CUDA") int32 RtWidth = 2048;
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "CUDA") int32 RtHeight = 2048;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "CUDA") int32 seed = 2048;
 
     // Expose whether resource is registered
     UPROPERTY(BlueprintReadOnly, Category = "CUDA")
@@ -67,6 +68,8 @@ public:
 
     //try to write to render target using cuda
     UFUNCTION(BlueprintCallable, Category = "CUDA") bool TryCudaWrite();
+    UFUNCTION(BlueprintCallable, Category = "CUDA") bool TryCudaWriteOnRenderThread();
+    UFUNCTION(BlueprintCallable, Category = "CUDA") void TryCudaWriteOnRenderThreadZeroBlock();
 
 private:
     // Internal native pointers + CUDA resource handle (only valid when bCUDARegistered true)

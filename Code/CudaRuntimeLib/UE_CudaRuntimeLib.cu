@@ -97,20 +97,44 @@ Error:
 
 
 // CUDA surface kernel: write solid red into the texture
-__global__ void FillSurfaceKernel(cudaSurfaceObject_t surf, int width, int height)
+//__global__ void FillSurfaceKernel(cudaSurfaceObject_t surf, int width, int height)
+//{
+//    int x = blockIdx.x * blockDim.x + threadIdx.x;
+//    int y = blockIdx.y * blockDim.y + threadIdx.y;
+//
+//    if (x < width && y < height)
+//    {
+//        uchar4 pixel = make_uchar4(255, 0, 255, 255); // RGBA8 red
+//        surf2Dwrite(pixel, surf, x * sizeof(uchar4), y);
+//    }
+//}
+__global__ void FillSurfaceKernel(cudaSurfaceObject_t surf, int width, int height, unsigned int seed)
 {
+	//int seed = 0; // You can modify this seed for different patterns
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
 
     if (x < width && y < height)
     {
-        uchar4 pixel = make_uchar4(255, 0, 255, 255); // RGBA8 red
+        // Simple hash function for pseudo randomness
+        unsigned int value = (x * 1973 + y * 9277 + seed * 26699) | 1;
+        value ^= value << 13;
+        value ^= value >> 17;
+        value ^= value << 5;
+
+        // Extract channels
+        unsigned char r = (value & 0xFF);
+        unsigned char g = (value >> 8) & 0xFF;
+        unsigned char b = (value >> 16) & 0xFF;
+
+        uchar4 pixel = make_uchar4(r, g, b, 255);
         surf2Dwrite(pixel, surf, x * sizeof(uchar4), y);
     }
 }
 
+
 // C wrapper function (called from Unreal)
-cudaError_t LaunchFillSurfaceKernel(cudaArray_t array, int width, int height)
+cudaError_t LaunchFillSurfaceKernel(cudaArray_t array, int width, int height, unsigned int seed)
 {
     cudaError_t cudaStatus = cudaSuccess;
 
@@ -130,7 +154,7 @@ cudaError_t LaunchFillSurfaceKernel(cudaArray_t array, int width, int height)
         (height + blockDim.y - 1) / blockDim.y);
 
     // Launch kernel
-    FillSurfaceKernel << <gridDim, blockDim >> > (surfObj, width, height);
+    FillSurfaceKernel << <gridDim, blockDim >> > (surfObj, width, height, seed);
 
     // Check for kernel launch errors
     cudaStatus = cudaGetLastError();
