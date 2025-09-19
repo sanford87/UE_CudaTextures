@@ -31,9 +31,11 @@ public class CudaTexture : ModuleRules
         string custom_cuda_lib = "CUDALib/lib";
         
         PublicIncludePaths.Add(Path.Combine(project_root_path, custom_cuda_include));
-        PublicAdditionalLibraries.Add(Path.Combine(project_root_path, custom_cuda_lib, "UE_Cuda_Lib_Test.lib"));
+        //PublicAdditionalLibraries.Add(Path.Combine(project_root_path, custom_cuda_lib, "UE_Cuda_Lib_Test.lib"));
+        PublicAdditionalLibraries.Add(Path.Combine(project_root_path, custom_cuda_lib, "UE_CudaRuntimeLib.lib"));
         //write out where we think the file is
-        System.Console.WriteLine(Path.Combine(project_root_path, custom_cuda_lib, "UE_Cuda_Lib_Test.lib"));
+        //System.Console.WriteLine(Path.Combine(project_root_path, custom_cuda_lib, "UE_Cuda_Lib_Test.lib"));
+        System.Console.WriteLine(Path.Combine(project_root_path, custom_cuda_lib, "UE_CudaRuntimeLib.lib"));
 
         // Uncomment if you are using Slate UI
         // PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });

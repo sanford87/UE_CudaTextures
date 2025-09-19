@@ -14,6 +14,7 @@
     <ProjectGuid>{0C4DBE9D-722B-73E9-E2FD-4F98DF966E7A}</ProjectGuid>
     <RootNamespace>CudaRuntimeLib</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>UE_CudaRuntimeLib</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
@@ -78,10 +79,10 @@
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CudaCompile Include="UE_Cuda_Lib.cu" />
+    <CudaCompile Include="UE_CudaRuntimeLib.cu" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="UE_Cuda_Lib.h" />
+    <ClInclude Include="UE_CudaRuntimeLib.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

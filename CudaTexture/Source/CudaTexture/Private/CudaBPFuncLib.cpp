@@ -6,7 +6,8 @@
 #include <cuda_runtime.h>
 #include <cuda_d3d11_interop.h>
 //#include "UE_Cuda_Lib_Test.h"
-#include "E:\GitLocal\UE_CudaTextures\CudaTexture\CUDALib\include\UE_Cuda_Lib_Test.h"
+//#include "E:\GitLocal\UE_CudaTextures\CudaTexture\CUDALib\include\UE_Cuda_Lib_Test.h"
+#include "E:\GitLocal\UE_CudaTextures\CudaTexture\CUDALib\include\UE_CudaRuntimeLib.h"
 
 FString UCudaBPFuncLib::GetDirectxVersion()
 {
