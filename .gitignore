@@ -14,7 +14,7 @@
 # Compiled Dynamic libraries
 *.so
 *.dylib
-*.dll
+#*.dll
 
 # Fortran module files
 *.mod
@@ -23,7 +23,7 @@
 *.lai
 *.la
 *.a
-*.lib
+#*.lib
 
 # Executables
 *.exe
@@ -76,5 +76,5 @@ DerivedDataCache/*
 /CudaTexture/Intermediate
 /CudaTexture/Saved
 /CudaTexture/Binaries
-/Code/CudaRuntimeLib/CudaRuntimeLib/x64
 /CudaTexture/enc_temp_folder
+/Code/CudaRuntimeLib/CudaRuntimeLib

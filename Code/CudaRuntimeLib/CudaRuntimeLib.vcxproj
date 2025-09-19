@@ -80,6 +80,9 @@
   <ItemGroup>
     <CudaCompile Include="UE_Cuda_Lib.cu" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="UE_Cuda_Lib.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 11.8.targets" />
