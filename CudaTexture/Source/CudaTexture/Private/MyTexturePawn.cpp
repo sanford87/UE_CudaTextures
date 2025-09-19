@@ -27,8 +27,10 @@
 //#include <D3D11RenderTarget.h>
 //#include <RHICore.h>
 
+//Custom CUDA lib
+#include "E:\GitLocal\UE_CudaTextures\CudaTexture\CUDALib\include\UE_CudaRuntimeLib.h"
 
-cudaArray_t array = nullptr;
+cudaArray_t CuArray = nullptr;
 
 
 // Sets default values
@@ -304,18 +306,18 @@ bool AMyTexturePawn::MapRenderTargetToCUDA()
     }
 
     // Get mapped array (subresource 0). For texture2D, use array.
-    array = nullptr;
-    err = cudaGraphicsSubResourceGetMappedArray(&array, CudaGraphicsResource, 0, 0);
+    CuArray = nullptr;
+    err = cudaGraphicsSubResourceGetMappedArray(&CuArray, CudaGraphicsResource, 0, 0);
     if (err != cudaSuccess)
     {
         UE_LOG(LogTemp, Error, TEXT("cudaGraphicsSubResourceGetMappedArray failed: %d: %s"), (int)err, ANSI_TO_TCHAR(cudaGetErrorString(err)));
         // Unmap to clean up
         cudaGraphicsUnmapResources(1, &CudaGraphicsResource, 0);
-        MappedCudaArray = array;
+        MappedCudaArray = CuArray;
         return false;
     }
 
-    MappedCudaArray = array;
+    MappedCudaArray = CuArray;
     //cudaArray_t MappedCudaArray = nullptr;
 
     // Now you have a cudaArray_t pointing to the texture memory. From here:
@@ -390,4 +392,18 @@ void AMyTexturePawn::ClearNativeResources()
     }
     NativeD3D11Texture = nullptr;
     MappedCudaArray = nullptr;
+}
+
+bool AMyTexturePawn::TryCudaWrite()
+{
+    if (MappedCudaArray)
+    {
+        cudaArray_t cuArray; //make new cudaArray_t to send to kernel 
+        cudaGraphicsSubResourceGetMappedArray(&cuArray, CudaGraphicsResource, 0, 0); // copy contents of cuArray to new resource
+        int w = 2048;
+
+        LaunchFillSurfaceKernel(cuArray, w, w);
+        return true;
+    }
+    return false;
 }

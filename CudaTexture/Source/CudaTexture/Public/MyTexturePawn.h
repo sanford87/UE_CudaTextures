@@ -41,7 +41,10 @@ public:
     // Properties exposed to Blueprints
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "CUDA") UTextureRenderTarget2D* MyRenderTarget;//Blueprint Assignable only allow of multicast or something.
     // Optionally store a string (handle or debug)
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GPU Interop") FString SharedHandle;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "CUDA") FString SharedHandle;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "CUDA") int32 RtWidth = 2048;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "CUDA") int32 RtHeight = 2048;
 
     // Expose whether resource is registered
     UPROPERTY(BlueprintReadOnly, Category = "CUDA")
@@ -62,6 +65,8 @@ public:
     UFUNCTION(BlueprintCallable, Category = "CUDA")
     bool UnmapRenderTargetFromCUDA();
 
+    //try to write to render target using cuda
+    UFUNCTION(BlueprintCallable, Category = "CUDA") bool TryCudaWrite();
 
 private:
     // Internal native pointers + CUDA resource handle (only valid when bCUDARegistered true)

@@ -1,5 +1,8 @@
 ﻿
 #include "cuda_runtime.h"
+#include "cuda_surface_types.h"
+#include "cuda_runtime_api.h"
+#include "surface_functions.h"
 #include "device_launch_parameters.h"
 
 #include <stdio.h>
@@ -89,5 +92,63 @@ Error:
     cudaFree(dev_a);
     cudaFree(dev_b);
     
+    return cudaStatus;
+}
+
+
+// CUDA surface kernel: write solid red into the texture
+__global__ void FillSurfaceKernel(cudaSurfaceObject_t surf, int width, int height)
+{
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (x < width && y < height)
+    {
+        uchar4 pixel = make_uchar4(255, 0, 0, 255); // RGBA8 red
+        surf2Dwrite(pixel, surf, x * sizeof(uchar4), y);
+    }
+}
+
+// C wrapper function (called from Unreal)
+cudaError_t LaunchFillSurfaceKernel(cudaArray_t array, int width, int height)
+{
+    cudaError_t cudaStatus = cudaSuccess;
+
+    // Describe the surface
+    cudaResourceDesc resDesc = {};
+    resDesc.resType = cudaResourceTypeArray;
+    resDesc.res.array.array = array;
+
+    // Create surface object
+    cudaSurfaceObject_t surfObj = 0;
+    cudaStatus = cudaCreateSurfaceObject(&surfObj, &resDesc);
+    if (cudaStatus != cudaSuccess)
+        return cudaStatus;
+
+    dim3 blockDim(16, 16);
+    dim3 gridDim((width + blockDim.x - 1) / blockDim.x,
+        (height + blockDim.y - 1) / blockDim.y);
+
+    // Launch kernel
+    FillSurfaceKernel << <gridDim, blockDim >> > (surfObj, width, height);
+
+    // Check for kernel launch errors
+    cudaStatus = cudaGetLastError();
+    if (cudaStatus != cudaSuccess)
+    {
+        cudaDestroySurfaceObject(surfObj);
+        return cudaStatus;
+    }
+
+    // Wait for kernel to finish and check for runtime errors
+    cudaStatus = cudaDeviceSynchronize();
+    if (cudaStatus != cudaSuccess)
+    {
+        cudaDestroySurfaceObject(surfObj);
+        return cudaStatus;
+    }
+
+    // Destroy surface object
+    cudaStatus = cudaDestroySurfaceObject(surfObj);
     return cudaStatus;
 }
