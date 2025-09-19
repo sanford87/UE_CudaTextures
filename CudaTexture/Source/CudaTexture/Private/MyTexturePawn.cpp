@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 #pragma once
 
 
@@ -11,6 +11,9 @@
 #include "Engine/TextureRenderTarget2D.h"// For UTextureRenderTarget2D and RTF_RGBA8
 #include "Misc/ScopeLock.h"
 #include "Async/Async.h"
+#include "RHIGPUReadback.h"
+#include "RHI.h"
+
 
 //Cuda
 #include "cuda.h"
@@ -19,8 +22,11 @@
 #include"cuda_d3d11_interop.h"
 
 //directX
-//#include <d3d11.h>
+#include <d3d11.h>
 //#include <dxgi.h>
+//#include <D3D11RenderTarget.h>
+//#include <RHICore.h>
+
 
 cudaArray_t array = nullptr;
 
@@ -77,7 +83,7 @@ UTextureRenderTarget2D* AMyTexturePawn::CreateCUDACompatibleRenderTarget(UObject
     NewRT->Filter = TF_Bilinear;
     NewRT->AddressX = TA_Clamp;
     NewRT->AddressY = TA_Clamp;
-    NewRT->ClearColor = FLinearColor::Black;
+    NewRT->ClearColor = FLinearColor::Red;
     NewRT->bGPUSharedFlag = true;
     NewRT->NeverStream = false;
     NewRT->InitAutoFormat(Width, Height);
@@ -90,7 +96,16 @@ UTextureRenderTarget2D* AMyTexturePawn::CreateCUDACompatibleRenderTarget(UObject
 
 bool AMyTexturePawn::FetchNativeD3D11Texture()
 {
-#if PLATFORM_WINDOWS
+    if (MyRenderTarget)
+    {
+        FTextureRenderTargetResource* RTRes = MyRenderTarget->GameThread_GetRenderTargetResource();
+        if (RTRes)
+        {
+            FRHITexture* TextureRHI = RTRes->GetRenderTargetTexture();
+            //TextureRHI is now valid
+        }
+    }
+
     if (!MyRenderTarget)
     {
         UE_LOG(LogTemp, Warning, TEXT("FetchNativeD3D11Texture: No MyRenderTarget set."));
@@ -128,7 +143,7 @@ bool AMyTexturePawn::FetchNativeD3D11Texture()
     ENQUEUE_RENDER_COMMAND(GetNative)
         ([TextureRHI, &OutNative, DoneEvent](FRHICommandListImmediate& RHICmdList)
             {
-                // FRHITexture::GetNativeResource() is an RHI-specific function — on D3D11 it returns ID3D11Texture2D*
+                // FRHITexture::GetNativeResource() is an RHI-specific function â€” on D3D11 it returns ID3D11Texture2D*
                 // Use GetNativeResource() which returns void*. Cast to ID3D11Texture2D* when needed.
                 void* NativeResource = TextureRHI->GetNativeResource(); // NOTE: may be null if not D3D11 RHI
                 OutNative = NativeResource;
@@ -150,15 +165,23 @@ bool AMyTexturePawn::FetchNativeD3D11Texture()
 
     UE_LOG(LogTemp, Log, TEXT("FetchNativeD3D11Texture: Native ptr fetched: %p"), NativeD3D11Texture);
     return true;
-#else
-    UE_LOG(LogTemp, Error, TEXT("FetchNativeD3D11Texture: Not supported on this platform."));
-    return false;
-#endif
+}
+
+ID3D11Resource* GetD3D11ResourceFromRT(UTextureRenderTarget2D* RT)
+{
+    if (!RT) return nullptr;
+
+    FTextureRenderTargetResource* RTResource = RT->GameThread_GetRenderTargetResource();
+    if (!RTResource) return nullptr;
+    FTexture2DRHIRef TextureRHI = RTResource->GetRenderTargetTexture();
+    if (!TextureRHI.IsValid()) return nullptr;
+
+    // Cast the generic RHI reference to D3D11
+    return static_cast<ID3D11Resource*>(TextureRHI->GetNativeResource());
 }
 
 bool AMyTexturePawn::RegisterRenderTargetWithCUDA()
 {
-#if PLATFORM_WINDOWS
     if (bCUDARegistered)
     {
         UE_LOG(LogTemp, Warning, TEXT("Already registered with CUDA."));
@@ -185,8 +208,18 @@ bool AMyTexturePawn::RegisterRenderTargetWithCUDA()
     }
 
     // 2) Register with CUDA (use cudaGraphicsRegisterFlagsSurfaceLoadStore if you plan to use surfaces)
-    ID3D11Resource* D3D11Res = reinterpret_cast<ID3D11Resource*>(NativeD3D11Texture);
-
+    //ID3D11Resource* D3D11Res = reinterpret_cast<ID3D11Resource*>(NativeD3D11Texture);
+    //ID3D11Resource* D3D11Res = reinterpret_cast<ID3D11Resource*>(MyRenderTarget->GetNativeResource());
+    //ID3D11Resource* D3D11Res = reinterpret_cast<ID3D11Resource*>(NativeRes);
+    //ID3D11Resource* D3D11Res = reinterpret_cast<ID3D11Resource*>(MyRenderTarget->GetRenderTargetResource());//might not return the right thing. Need to go one level deeper. Added function to get D3D11Resource
+    
+    ID3D11Resource* D3D11Res = GetD3D11ResourceFromRT(MyRenderTarget);
+    if (!D3D11Res)
+    {
+        UE_LOG(LogTemp, Error, TEXT("D3D11Res is null."));
+        return false;
+    }
+    //Create Cuda Error for testing
     cudaError_t CudaErr = cudaSuccess;
 
     // Option flags: if you want CUDA kernels to write/read image memory directly using surface/texture,
@@ -204,15 +237,12 @@ bool AMyTexturePawn::RegisterRenderTargetWithCUDA()
     bCUDARegistered = true;
     UE_LOG(LogTemp, Log, TEXT("Render target registered with CUDA successfully."));
     return true;
-#else
-    UE_LOG(LogTemp, Error, TEXT("RegisterRenderTargetWithCUDA: Not supported on this platform."));
-    return false;
-#endif
 }
+
+
 
 bool AMyTexturePawn::UnregisterRenderTargetFromCUDA()
 {
-#if PLATFORM_WINDOWS
     if (!bCUDARegistered)
     {
         UE_LOG(LogTemp, Warning, TEXT("UnregisterRenderTargetFromCUDA: Not registered."));
@@ -240,15 +270,10 @@ bool AMyTexturePawn::UnregisterRenderTargetFromCUDA()
     NativeD3D11Texture = nullptr;
     UE_LOG(LogTemp, Log, TEXT("Unregistered render target from CUDA."));
     return true;
-#else
-    UE_LOG(LogTemp, Error, TEXT("UnregisterRenderTargetFromCUDA: Not supported on this platform."));
-    return false;
-#endif
 }
 
 bool AMyTexturePawn::MapRenderTargetToCUDA()
 {
-#if PLATFORM_WINDOWS
     if (!bCUDARegistered || !CudaGraphicsResource)
     {
         UE_LOG(LogTemp, Warning, TEXT("MapRenderTargetToCUDA: Not registered with CUDA."));
@@ -282,19 +307,14 @@ bool AMyTexturePawn::MapRenderTargetToCUDA()
 
     // Now you have a cudaArray_t pointing to the texture memory. From here:
     //  - Create a cudaResourceDesc -> cudaTextureObject or cudaSurfaceObject
-    //  - Or use cudaMemcpy2DFromArray etc. (but that copies — to stay on GPU avoid copying and use surface/texture objects)
+    //  - Or use cudaMemcpy2DFromArray etc. (but that copies â€” to stay on GPU avoid copying and use surface/texture objects)
     //
     UE_LOG(LogTemp, Log, TEXT("MapRenderTargetToCUDA: Mapped cudaArray %p"), (void*)MappedCudaArray);
     return true;
-#else
-    UE_LOG(LogTemp, Error, TEXT("MapRenderTargetToCUDA: Not supported on this platform."));
-    return false;
-#endif
 }
 
 bool AMyTexturePawn::UnmapRenderTargetFromCUDA()
 {
-#if PLATFORM_WINDOWS
     if (!bCUDARegistered || !CudaGraphicsResource)
     {
         UE_LOG(LogTemp, Warning, TEXT("UnmapRenderTargetFromCUDA: Not registered."));
@@ -315,15 +335,10 @@ bool AMyTexturePawn::UnmapRenderTargetFromCUDA()
 
     UE_LOG(LogTemp, Log, TEXT("UnmapRenderTargetFromCUDA: Unmapped successfully."));
     return true;
-#else
-    UE_LOG(LogTemp, Error, TEXT("UnmapRenderTargetFromCUDA: Not supported on this platform."));
-    return false;
-#endif
 }
 
 bool AMyTexturePawn::TryCudaCall()
 {
-#if PLATFORM_WINDOWS
     if (!bCUDARegistered || !MappedCudaArray)
     {
         UE_LOG(LogTemp, Warning, TEXT("TryCudaCall: Must register and map before calling CUDA operations."));
@@ -351,15 +366,10 @@ bool AMyTexturePawn::TryCudaCall()
     UE_LOG(LogTemp, Log, TEXT("TryCudaCall: You can now create a cudaSurfaceObject/textureObject from MappedCudaArray and run kernels."));
 
     return true;
-#else
-    UE_LOG(LogTemp, Error, TEXT("TryCudaCall: Not supported on this platform."));
-    return false;
-#endif
 }
 
 void AMyTexturePawn::ClearNativeResources()
 {
-#if PLATFORM_WINDOWS
     // Ensure unregistered
     if (bCUDARegistered)
     {
@@ -367,5 +377,4 @@ void AMyTexturePawn::ClearNativeResources()
     }
     NativeD3D11Texture = nullptr;
     MappedCudaArray = nullptr;
-#endif
 }

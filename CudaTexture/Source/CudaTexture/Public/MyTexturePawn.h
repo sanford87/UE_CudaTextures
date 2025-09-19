@@ -37,7 +37,7 @@ public:
     // Example Blueprint-callable wrapper to attempt a simple CUDA operation (user to fill kernel)
 	UFUNCTION(BlueprintCallable, Category = "CUDA") bool TryCudaCall();
     //Create CUDA Render Target
-	UFUNCTION(BlueprintCallable, Category = "CUDA") static UTextureRenderTarget2D* CreateCUDACompatibleRenderTarget(UObject* Outer, int32 Width, int32 Height);
+	UFUNCTION(BlueprintCallable, Category = "CUDA") static UTextureRenderTarget2D* CreateCUDACompatibleRenderTarget(UObject* Outer, int32 Width =2048, int32 Height=2048);
     // Properties exposed to Blueprints
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "CUDA") UTextureRenderTarget2D* MyRenderTarget;//Blueprint Assignable only allow of multicast or something.
     // Optionally store a string (handle or debug)
