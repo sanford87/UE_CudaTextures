@@ -398,7 +398,8 @@ bool AMyTexturePawn::TryCudaWrite()
 {
     if (MappedCudaArray)
     {
-        cudaArray_t cuArray; //make new cudaArray_t to send to kernel 
+        //cudaArray_t cuArray; //make new cudaArray_t to send to kernel 
+        cudaArray_t cuArray = static_cast<cudaArray_t>(MappedCudaArray);
         cudaGraphicsSubResourceGetMappedArray(&cuArray, CudaGraphicsResource, 0, 0); // copy contents of cuArray to new resource
         int w = 2048;
 
